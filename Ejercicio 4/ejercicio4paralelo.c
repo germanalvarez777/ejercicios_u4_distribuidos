@@ -1,48 +1,72 @@
 #include <stdio.h>
 #include <omp.h>
 
-#define N 100000       // 100.000 elementos
-#define BASE 100000000 // 1.000.000 Base
+#define N 1000 // Elementos Arreglo
 
 void inicializar(int vector1[], int vector2[])
 {
-
+    int base = 100000;
 #pragma omp parallel for
     for (int i = 0; i < N; i++)
     {
-        vector1[i] = BASE + i;
-        vector2[i] = BASE + i;
+        vector1[i] = base + i;
+        vector2[i] = base + i;
     }
 }
 
-void suma(int vector1[], int vector2[], int resultado[])
+double sumar(int vector1[], int vector2[], int resultado[], int hilos)
 {
-#pragma omp parallel for
+    omp_set_num_threads(hilos);
+    double tiempo_inicio = omp_get_wtime();
+
+#pragma omp for
     for (int i = 0; i < N; i++)
     {
         resultado[i] = vector1[i] + vector2[i];
     }
+
+    double tiempo_fin = omp_get_wtime();
+    double tiempo_diferencia = tiempo_fin - tiempo_inicio;
+
+    return tiempo_diferencia;
 }
 
-void main()
+double promedio(double tiempos[])
 {
-    int num_threads = 1;
-    omp_set_num_threads(num_threads);
+    double promedio = 0.0;
+    for (int i = 0; i < 100; i++)
+    {
+        promedio += tiempos[i];
+    }
+    promedio /= 100;
 
+    return promedio;
+}
+
+int main()
+{
+    int hilos = 1;
     int vector1[N];
     int vector2[N];
     int resultado[N];
 
+    double tiempos[200];
+    int posicion = 0;
+
     inicializar(vector1, vector2);
 
-    double tiempo_inicio = omp_get_wtime();
-    printf("Tiempo de inicio: %.9f segundos\n", tiempo_inicio);
+    while (posicion < sizeof(tiempos))
+    {
+        double tiempo_diferencia = sumar(vector1, vector2, resultado, hilos);
 
-    suma(vector1, vector2, resultado);
+        if (tiempo_diferencia > 0.0)
+        {
+            tiempos[posicion] = tiempo_diferencia;
+            posicion++;
+        }
+    }
 
-    double tiempo_fin = omp_get_wtime();
-    printf("Tiempo de finalizacion: %.9f segundos\n", tiempo_fin);
+    printf("[Hilos: %d, Arreglo: %d] Tiempo Promedio: %.9f", hilos, N, promedio(tiempos));
 
-    double tiempo_transcurrido = tiempo_fin - tiempo_inicio;
-    printf("Tiempo de suma: %.9f segundos\n", tiempo_transcurrido);
+    return 0;
 }
