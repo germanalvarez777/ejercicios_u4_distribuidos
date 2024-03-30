@@ -1,32 +1,76 @@
 #include <stdio.h>
-#include <sys/time.h>
+#include <stdlib.h>
+#include <time.h>
+#include <windows.h>
 
-#define N 100 // Elementos Arreglo
+#define N 50000 // Elementos Arreglo
 
-void inicializar(int vector1[], int vector2[])
+void generar_csv(const char *filename)
 {
-    int base = 100000;
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL)
+    {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+
+    srand(time(NULL)); // Semilla para la generación de números aleatorios
+
     for (int i = 0; i < N; i++)
     {
-        vector1[i] = base + i;
-        vector2[i] = base + i;
+        double num = (double)rand() / RAND_MAX * 1000.0; // Generar número aleatorio entre 0 y 1000
+        fprintf(fp, "%.9f\n", num);
     }
+
+    fclose(fp);
 }
 
-double sumar(int vector1[], int vector2[], int resultado[])
+void cargar_desde_csv(const char *filename, double vector[])
 {
-    struct timeval inicio, fin;
-    gettimeofday(&inicio, NULL);
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL)
+    {
+        printf("Error al abrir el archivo.\n");
+        return;
+    }
+
+    for (int i = 0; i < N; i++)
+    {
+        if (fscanf(fp, "%lf", &vector[i]) != 1)
+        {
+            printf("Error al leer el archivo.\n");
+            break;
+        }
+    }
+
+    fclose(fp);
+}
+
+double obtener_tiempo_actual()
+{
+    LARGE_INTEGER frecuencia;
+    QueryPerformanceFrequency(&frecuencia);
+
+    LARGE_INTEGER contador;
+    QueryPerformanceCounter(&contador);
+
+    return (double)contador.QuadPart / (double)frecuencia.QuadPart;
+}
+
+double sumar(double vector1[], double vector2[], double resultado[])
+{
+    LARGE_INTEGER inicio, fin;
+    QueryPerformanceCounter(&inicio);
 
     for (int i = 0; i < N; i++)
     {
         resultado[i] = vector1[i] + vector2[i];
     }
 
-    gettimeofday(&fin, NULL);
-    double tiempo_inicio = inicio.tv_sec + inicio.tv_usec / 1000000.0;
-    double tiempo_fin = fin.tv_sec + fin.tv_usec / 1000000.0;
-    double tiempo_diferencia = tiempo_fin - tiempo_inicio;
+    QueryPerformanceCounter(&fin);
+    double tiempo_inicio = (double)inicio.QuadPart;
+    double tiempo_fin = (double)fin.QuadPart;
+    double tiempo_diferencia = (tiempo_fin - tiempo_inicio) / obtener_tiempo_actual();
 
     return tiempo_diferencia;
 }
@@ -45,27 +89,31 @@ double promedio(double tiempos[])
 
 int main()
 {
-    int vector1[N];
-    int vector2[N];
-    int resultado[N];
+    /* generar_csv("vector1.csv");
+    generar_csv("vector2.csv"); */
 
-    double tiempos[200];
+    double vector1[N];
+    double vector2[N];
+    double resultado[N];
+
+    cargar_desde_csv("vector1.csv", vector1);
+    cargar_desde_csv("vector2.csv", vector2);
+
+    double tiempos[4000];
     int posicion = 0;
 
-    inicializar(vector1, vector2);
-
-    while (posicion < sizeof(tiempos))
+    while (posicion < sizeof(tiempos) / sizeof(tiempos[0]))
     {
         double tiempo_diferencia = sumar(vector1, vector2, resultado);
 
-        if (tiempo_diferencia > 0.0)
-        {
-            tiempos[posicion] = tiempo_diferencia;
-            posicion++;
-        }
+        tiempos[posicion] = tiempo_diferencia;
+        posicion++;
     }
 
-    printf("[Arreglo: %d] Tiempo Promedio: %.9f", N, promedio(tiempos));
+    printf("Tiempo Promedio: %.9f\n", promedio(tiempos));
+
+    printf("Ultimo resultado: %.9f\n", resultado[N - 1]);
+    printf("Ultimo tiempo de ejecucion: %.9f\n", tiempos[sizeof(tiempos) / sizeof(tiempos[0]) - 1]);
 
     return 0;
 }
