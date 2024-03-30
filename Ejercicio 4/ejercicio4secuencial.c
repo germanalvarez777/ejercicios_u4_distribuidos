@@ -46,17 +46,6 @@ void cargar_desde_csv(const char *filename, double vector[])
     fclose(fp);
 }
 
-double obtener_tiempo_actual()
-{
-    LARGE_INTEGER frecuencia;
-    QueryPerformanceFrequency(&frecuencia);
-
-    LARGE_INTEGER contador;
-    QueryPerformanceCounter(&contador);
-
-    return (double)contador.QuadPart / (double)frecuencia.QuadPart;
-}
-
 double sumar(double vector1[], double vector2[], double resultado[])
 {
     LARGE_INTEGER inicio, fin;
@@ -68,27 +57,33 @@ double sumar(double vector1[], double vector2[], double resultado[])
     }
 
     QueryPerformanceCounter(&fin);
+    LARGE_INTEGER frecuencia;
+    QueryPerformanceFrequency(&frecuencia);
     double tiempo_inicio = (double)inicio.QuadPart;
     double tiempo_fin = (double)fin.QuadPart;
-    double tiempo_diferencia = (tiempo_fin - tiempo_inicio) / obtener_tiempo_actual();
+    double tiempo_diferencia = (tiempo_fin - tiempo_inicio) / (double)frecuencia.QuadPart;
 
     return tiempo_diferencia;
 }
 
-double promedio(double tiempos[])
+double promedio(double tiempos[], int total_elementos)
 {
     double promedio = 0.0;
-    for (int i = 0; i < 100; i++)
+
+    for (int i = 0; i < total_elementos; i++)
     {
         promedio += tiempos[i];
     }
-    promedio /= 100;
+    promedio /= total_elementos;
 
     return promedio;
 }
 
 int main()
 {
+    LARGE_INTEGER inicio, fin;
+    QueryPerformanceCounter(&inicio);
+
     /* generar_csv("vector1.csv");
     generar_csv("vector2.csv"); */
 
@@ -110,10 +105,17 @@ int main()
         posicion++;
     }
 
-    printf("Tiempo Promedio: %.9f\n", promedio(tiempos));
+    int total_elementos = sizeof(tiempos) / sizeof(tiempos[0]);
 
-    printf("Ultimo resultado: %.9f\n", resultado[N - 1]);
-    printf("Ultimo tiempo de ejecucion: %.9f\n", tiempos[sizeof(tiempos) / sizeof(tiempos[0]) - 1]);
+    printf("Tiempo Promedio calculo de Suma: %.9f\n", promedio(tiempos, total_elementos));
+
+    QueryPerformanceCounter(&fin);
+
+    LARGE_INTEGER frecuencia;
+    QueryPerformanceFrequency(&frecuencia);
+    double tiempo_total = (double)(fin.QuadPart - inicio.QuadPart) / (double)frecuencia.QuadPart;
+
+    printf("Tiempo total de ejecución: %.9f segundos\n", tiempo_total);
 
     return 0;
 }
